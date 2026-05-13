@@ -212,6 +212,12 @@ dependencies {
     implementation(libs.ktor.network.tls.certificates)
     implementation(libs.ktor.serialization.kotlinx.json)
 
+    // Supabase (Realtime + Storage transport — yuyu-clauds fork)
+    implementation(platform(libs.supabase.bom))
+    implementation(libs.supabase.realtime)
+    implementation(libs.supabase.storage)
+    implementation(libs.ktor.client.okhttp)
+
     // Force patched Netty to fix CVE-2026-33870 (HTTP Request Smuggling)
     // and CVE-2026-33871 (HTTP/2 CONTINUATION Frame Flood DoS).
     // Ktor 3.4.2 ships netty 4.2.9 which is vulnerable.
