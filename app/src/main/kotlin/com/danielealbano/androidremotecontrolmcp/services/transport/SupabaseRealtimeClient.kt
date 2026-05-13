@@ -15,8 +15,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.serialization.json.JsonObject
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Infrastructure wrapper around supabase-kt: opens a Realtime channel pair
@@ -31,8 +29,7 @@ import javax.inject.Singleton
  *   security comes from Supabase RLS rules, not key secrecy.
  * @param deviceId v1.0 hardcoded "yuyu-oneplus"
  */
-@Singleton
-open class SupabaseRealtimeClient @Inject constructor(
+open class SupabaseRealtimeClient(
     private val supabaseUrl: String,
     private val publishableKey: String,
     private val deviceId: String,

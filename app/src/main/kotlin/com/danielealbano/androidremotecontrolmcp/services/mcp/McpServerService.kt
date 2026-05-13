@@ -47,6 +47,8 @@ import com.danielealbano.androidremotecontrolmcp.services.screencapture.Screensh
 import com.danielealbano.androidremotecontrolmcp.services.screencapture.ScreenshotEncoder
 import com.danielealbano.androidremotecontrolmcp.services.storage.FileOperationProvider
 import com.danielealbano.androidremotecontrolmcp.services.storage.StorageLocationProvider
+import com.danielealbano.androidremotecontrolmcp.services.transport.RealtimeMcpBridge
+import com.danielealbano.androidremotecontrolmcp.services.transport.SupabaseRealtimeClient
 import com.danielealbano.androidremotecontrolmcp.services.tunnel.TunnelManager
 import com.danielealbano.androidremotecontrolmcp.ui.MainActivity
 import dagger.hilt.android.AndroidEntryPoint
@@ -129,6 +131,7 @@ class McpServerService : Service() {
     private val serverActive = AtomicBoolean(false)
     private var mcpServer: McpServer? = null
     private var tunnelObserverJob: Job? = null
+    private var realtimeBridge: RealtimeMcpBridge? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -217,6 +220,29 @@ class McpServerService : Service() {
                     mcpSdkServer = sdkServer,
                 )
             mcpServer?.start()
+
+            // Attach Supabase Realtime transport as a second session on the same SDK
+            // Server (sessionRegistry in MCP SDK 0.8.3 allows parallel transports).
+            // Failure here is non-fatal: the Ktor path is already up and serving.
+            if (config.supabaseUrl.isNotBlank() && config.supabasePublishableKey.isNotBlank()) {
+                @Suppress("TooGenericExceptionCaught")
+                try {
+                    val supabaseClient =
+                        SupabaseRealtimeClient(
+                            supabaseUrl = config.supabaseUrl,
+                            publishableKey = config.supabasePublishableKey,
+                            deviceId = config.supabaseDeviceId,
+                        )
+                    val bridge = RealtimeMcpBridge(supabaseClient, sdkServer)
+                    bridge.start()
+                    realtimeBridge = bridge
+                    Log.i(TAG, "Supabase Realtime bridge attached for device ${config.supabaseDeviceId}")
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to start Supabase Realtime bridge (Ktor path continues)", e)
+                }
+            } else {
+                Log.i(TAG, "Supabase Realtime disabled (URL or key blank)")
+            }
 
             updateStatus(
                 ServerStatus.Running(
@@ -340,6 +366,21 @@ class McpServerService : Service() {
         Log.i(TAG, "McpServerService destroying")
         updateStatus(ServerStatus.Stopping)
 
+        // Stop the Supabase Realtime bridge before the Ktor server so any in-flight
+        // tool calls landing on the Realtime session see a clean teardown rather
+        // than a closed sdkServer.
+        realtimeBridge?.let { bridge ->
+            @Suppress("TooGenericExceptionCaught")
+            try {
+                runBlocking { withTimeout(REALTIME_STOP_TIMEOUT_MS) { bridge.stop() } }
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                Log.w(TAG, "Realtime bridge stop timed out after ${REALTIME_STOP_TIMEOUT_MS}ms", e)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error stopping Realtime bridge", e)
+            }
+        }
+        realtimeBridge = null
+
         // Cancel tunnel status observer before stopping the tunnel
         tunnelObserverJob?.cancel()
         tunnelObserverJob = null
@@ -422,6 +463,7 @@ class McpServerService : Service() {
         const val SHUTDOWN_GRACE_PERIOD_MS = 1000L
         const val SHUTDOWN_TIMEOUT_MS = 5000L
         const val TUNNEL_STOP_TIMEOUT_MS = 3_000L
+        const val REALTIME_STOP_TIMEOUT_MS = 3_000L
 
         /**
          * Shared server status flow. Collected by MainViewModel to update the UI.

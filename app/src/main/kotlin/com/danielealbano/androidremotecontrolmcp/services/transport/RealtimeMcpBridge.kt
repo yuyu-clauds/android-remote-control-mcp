@@ -3,8 +3,6 @@ package com.danielealbano.androidremotecontrolmcp.services.transport
 import android.util.Log
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.ServerSession
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Bridges Supabase Realtime to the MCP SDK [Server] as a second transport
@@ -19,9 +17,8 @@ import javax.inject.Singleton
  *   stop()  — close the session and the Supabase websocket. Safe to call
  *             at any time, including before start() (no-op).
  */
-@Singleton
 @Suppress("DEPRECATION")
-class RealtimeMcpBridge @Inject constructor(
+class RealtimeMcpBridge(
     private val supabaseClient: SupabaseRealtimeClient,
     private val mcpSdkServer: Server,
 ) {
