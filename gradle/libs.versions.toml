@@ -22,6 +22,9 @@ ktor = "3.4.0"
 # MCP SDK
 mcp-kotlin-sdk = "0.8.3"
 
+# Supabase (Realtime + Storage transport — yuyu-clauds fork only)
+supabase = "3.0.3"
+
 # SLF4J (routes SDK logs to android.util.Log)
 slf4j-android = "1.7.36"
 
