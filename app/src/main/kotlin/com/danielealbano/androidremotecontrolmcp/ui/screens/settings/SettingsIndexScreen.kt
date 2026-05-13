@@ -12,7 +12,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Tune
@@ -56,12 +55,6 @@ fun SettingsIndexScreen(
                 title = stringResource(R.string.settings_security_title),
                 subtitle = stringResource(R.string.settings_security_subtitle),
                 onClick = { onNavigate(SettingsRoute.Security.route) },
-            )
-            SettingsEntry(
-                icon = Icons.Default.Cloud,
-                title = stringResource(R.string.settings_tunnel_title),
-                subtitle = stringResource(R.string.settings_tunnel_subtitle),
-                onClick = { onNavigate(SettingsRoute.Tunnel.route) },
             )
             SettingsEntry(
                 icon = Icons.Default.Build,

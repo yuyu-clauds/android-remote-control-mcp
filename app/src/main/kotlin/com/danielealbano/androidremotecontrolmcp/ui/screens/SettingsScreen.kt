@@ -16,7 +16,6 @@ import com.danielealbano.androidremotecontrolmcp.ui.screens.settings.Permissions
 import com.danielealbano.androidremotecontrolmcp.ui.screens.settings.SecuritySettingsScreen
 import com.danielealbano.androidremotecontrolmcp.ui.screens.settings.SettingsIndexScreen
 import com.danielealbano.androidremotecontrolmcp.ui.screens.settings.StorageSettingsScreen
-import com.danielealbano.androidremotecontrolmcp.ui.screens.settings.TunnelSettingsScreen
 import com.danielealbano.androidremotecontrolmcp.ui.viewmodels.MainViewModel
 
 @Composable
@@ -54,9 +53,6 @@ fun SettingsScreen(
         }
         composable(SettingsRoute.Security.route) {
             SecuritySettingsScreen(onBack = { navController.popBackStack() }, viewModel = viewModel)
-        }
-        composable(SettingsRoute.Tunnel.route) {
-            TunnelSettingsScreen(onBack = { navController.popBackStack() }, viewModel = viewModel)
         }
         composable(SettingsRoute.McpTools.route) {
             McpToolsSettingsScreen(onBack = { navController.popBackStack() })

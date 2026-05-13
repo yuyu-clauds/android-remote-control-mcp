@@ -7,7 +7,6 @@ import com.danielealbano.androidremotecontrolmcp.data.model.BindingAddress
 import com.danielealbano.androidremotecontrolmcp.data.model.CertificateSource
 import com.danielealbano.androidremotecontrolmcp.data.model.ServerConfig
 import com.danielealbano.androidremotecontrolmcp.data.model.ToolPermissionsConfig
-import com.danielealbano.androidremotecontrolmcp.data.model.TunnelProviderType
 import com.danielealbano.androidremotecontrolmcp.data.repository.SettingsRepository
 import com.danielealbano.androidremotecontrolmcp.services.storage.StorageLocationProvider
 import io.mockk.coEvery
@@ -318,78 +317,6 @@ class AdbConfigHandlerTest {
             }
 
         @Test
-        @DisplayName("tunnel_enabled is applied")
-        fun tunnelEnabled() =
-            runTest {
-                val intent =
-                    createIntent(AdbConfigReceiver.ACTION_CONFIGURE) {
-                        boolean(AdbConfigHandler.EXTRA_TUNNEL_ENABLED, true)
-                    }
-                handler.handle(context, intent)
-                coVerify { settingsRepository.updateTunnelEnabled(true) }
-            }
-
-        @Test
-        @DisplayName("tunnel_provider CLOUDFLARE is applied")
-        fun tunnelProviderCloudflare() =
-            runTest {
-                val intent =
-                    createIntent(AdbConfigReceiver.ACTION_CONFIGURE) {
-                        string(AdbConfigHandler.EXTRA_TUNNEL_PROVIDER, "CLOUDFLARE")
-                    }
-                handler.handle(context, intent)
-                coVerify { settingsRepository.updateTunnelProvider(TunnelProviderType.CLOUDFLARE) }
-            }
-
-        @Test
-        @DisplayName("tunnel_provider NGROK is applied")
-        fun tunnelProviderNgrok() =
-            runTest {
-                val intent =
-                    createIntent(AdbConfigReceiver.ACTION_CONFIGURE) {
-                        string(AdbConfigHandler.EXTRA_TUNNEL_PROVIDER, "NGROK")
-                    }
-                handler.handle(context, intent)
-                coVerify { settingsRepository.updateTunnelProvider(TunnelProviderType.NGROK) }
-            }
-
-        @Test
-        @DisplayName("invalid tunnel_provider is rejected")
-        fun invalidTunnelProvider() =
-            runTest {
-                val intent =
-                    createIntent(AdbConfigReceiver.ACTION_CONFIGURE) {
-                        string(AdbConfigHandler.EXTRA_TUNNEL_PROVIDER, "WIREGUARD")
-                    }
-                handler.handle(context, intent)
-                coVerify(exactly = 0) { settingsRepository.updateTunnelProvider(any()) }
-            }
-
-        @Test
-        @DisplayName("ngrok_authtoken is applied")
-        fun ngrokAuthtoken() =
-            runTest {
-                val intent =
-                    createIntent(AdbConfigReceiver.ACTION_CONFIGURE) {
-                        string(AdbConfigHandler.EXTRA_NGROK_AUTHTOKEN, "2abc_ngrok_token")
-                    }
-                handler.handle(context, intent)
-                coVerify { settingsRepository.updateNgrokAuthtoken("2abc_ngrok_token") }
-            }
-
-        @Test
-        @DisplayName("ngrok_domain is applied")
-        fun ngrokDomain() =
-            runTest {
-                val intent =
-                    createIntent(AdbConfigReceiver.ACTION_CONFIGURE) {
-                        string(AdbConfigHandler.EXTRA_NGROK_DOMAIN, "my-app.ngrok-free.app")
-                    }
-                handler.handle(context, intent)
-                coVerify { settingsRepository.updateNgrokDomain("my-app.ngrok-free.app") }
-            }
-
-        @Test
         @DisplayName("valid file_size_limit_mb is applied")
         fun validFileSizeLimit() =
             runTest {
@@ -507,9 +434,6 @@ class AdbConfigHandlerTest {
                         string(AdbConfigHandler.EXTRA_BINDING_ADDRESS, "0.0.0.0")
                         int(AdbConfigHandler.EXTRA_PORT, 3000)
                         boolean(AdbConfigHandler.EXTRA_AUTO_START_ON_BOOT, true)
-                        boolean(AdbConfigHandler.EXTRA_TUNNEL_ENABLED, true)
-                        string(AdbConfigHandler.EXTRA_TUNNEL_PROVIDER, "NGROK")
-                        string(AdbConfigHandler.EXTRA_NGROK_AUTHTOKEN, "ngrok-token")
                     }
                 handler.handle(context, intent)
 
@@ -517,9 +441,6 @@ class AdbConfigHandlerTest {
                 coVerify { settingsRepository.updateBindingAddress(BindingAddress.NETWORK) }
                 coVerify { settingsRepository.updatePort(3000) }
                 coVerify { settingsRepository.updateAutoStartOnBoot(true) }
-                coVerify { settingsRepository.updateTunnelEnabled(true) }
-                coVerify { settingsRepository.updateTunnelProvider(TunnelProviderType.NGROK) }
-                coVerify { settingsRepository.updateNgrokAuthtoken("ngrok-token") }
             }
 
         @Test
@@ -536,10 +457,6 @@ class AdbConfigHandlerTest {
                 coVerify(exactly = 0) { settingsRepository.updateHttpsEnabled(any()) }
                 coVerify(exactly = 0) { settingsRepository.updateCertificateSource(any()) }
                 coVerify(exactly = 0) { settingsRepository.updateCertificateHostname(any()) }
-                coVerify(exactly = 0) { settingsRepository.updateTunnelEnabled(any()) }
-                coVerify(exactly = 0) { settingsRepository.updateTunnelProvider(any()) }
-                coVerify(exactly = 0) { settingsRepository.updateNgrokAuthtoken(any()) }
-                coVerify(exactly = 0) { settingsRepository.updateNgrokDomain(any()) }
                 coVerify(exactly = 0) { settingsRepository.updateFileSizeLimit(any()) }
                 coVerify(exactly = 0) { settingsRepository.updateAllowHttpDownloads(any()) }
                 coVerify(exactly = 0) { settingsRepository.updateAllowUnverifiedHttpsCerts(any()) }
@@ -619,30 +536,6 @@ class AdbConfigHandlerTest {
             }
 
         @Test
-        @DisplayName("empty ngrok_authtoken is ignored")
-        fun emptyNgrokAuthtokenIgnored() =
-            runTest {
-                val intent =
-                    createIntent(AdbConfigReceiver.ACTION_CONFIGURE) {
-                        string(AdbConfigHandler.EXTRA_NGROK_AUTHTOKEN, "")
-                    }
-                handler.handle(context, intent)
-                coVerify(exactly = 0) { settingsRepository.updateNgrokAuthtoken(any()) }
-            }
-
-        @Test
-        @DisplayName("absent ngrok_domain does not update setting")
-        fun absentNgrokDomain() =
-            runTest {
-                val intent =
-                    createIntent(AdbConfigReceiver.ACTION_CONFIGURE) {
-                        string(AdbConfigHandler.EXTRA_NGROK_AUTHTOKEN, "some-token")
-                    }
-                handler.handle(context, intent)
-                coVerify(exactly = 0) { settingsRepository.updateNgrokDomain(any()) }
-            }
-
-        @Test
         @DisplayName("https_enabled false is applied")
         fun httpsEnabledFalse() =
             runTest {
@@ -652,18 +545,6 @@ class AdbConfigHandlerTest {
                     }
                 handler.handle(context, intent)
                 coVerify { settingsRepository.updateHttpsEnabled(false) }
-            }
-
-        @Test
-        @DisplayName("tunnel_enabled false is applied")
-        fun tunnelEnabledFalse() =
-            runTest {
-                val intent =
-                    createIntent(AdbConfigReceiver.ACTION_CONFIGURE) {
-                        boolean(AdbConfigHandler.EXTRA_TUNNEL_ENABLED, false)
-                    }
-                handler.handle(context, intent)
-                coVerify { settingsRepository.updateTunnelEnabled(false) }
             }
 
         @Test

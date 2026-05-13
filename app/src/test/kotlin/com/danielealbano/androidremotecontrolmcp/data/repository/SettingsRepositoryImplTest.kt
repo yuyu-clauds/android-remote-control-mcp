@@ -12,7 +12,6 @@ import com.danielealbano.androidremotecontrolmcp.data.model.BuiltinPermissions
 import com.danielealbano.androidremotecontrolmcp.data.model.CertificateSource
 import com.danielealbano.androidremotecontrolmcp.data.model.ServerConfig
 import com.danielealbano.androidremotecontrolmcp.data.model.ToolPermissionsConfig
-import com.danielealbano.androidremotecontrolmcp.data.model.TunnelProviderType
 import io.mockk.every
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
@@ -85,10 +84,6 @@ class SettingsRepositoryImplTest {
                 assertFalse(config.httpsEnabled)
                 assertEquals(CertificateSource.AUTO_GENERATED, config.certificateSource)
                 assertEquals(ServerConfig.DEFAULT_CERTIFICATE_HOSTNAME, config.certificateHostname)
-                assertFalse(config.tunnelEnabled)
-                assertEquals(TunnelProviderType.CLOUDFLARE, config.tunnelProvider)
-                assertEquals("", config.ngrokAuthtoken)
-                assertEquals("", config.ngrokDomain)
                 assertEquals("", config.deviceSlug)
             }
 
@@ -414,98 +409,6 @@ class SettingsRepositoryImplTest {
 
                     cancelAndIgnoreRemainingEvents()
                 }
-            }
-    }
-
-    @Nested
-    @DisplayName("updateTunnelEnabled")
-    inner class UpdateTunnelEnabled {
-        @Test
-        fun `enables tunnel`() =
-            testScope.runTest {
-                repository.updateTunnelEnabled(true)
-                val config = repository.getServerConfig()
-
-                assertTrue(config.tunnelEnabled)
-            }
-
-        @Test
-        fun `disables tunnel`() =
-            testScope.runTest {
-                repository.updateTunnelEnabled(true)
-                repository.updateTunnelEnabled(false)
-                val config = repository.getServerConfig()
-
-                assertFalse(config.tunnelEnabled)
-            }
-    }
-
-    @Nested
-    @DisplayName("updateTunnelProvider")
-    inner class UpdateTunnelProvider {
-        @Test
-        fun `updates tunnel provider to NGROK`() =
-            testScope.runTest {
-                repository.updateTunnelProvider(TunnelProviderType.NGROK)
-                val config = repository.getServerConfig()
-
-                assertEquals(TunnelProviderType.NGROK, config.tunnelProvider)
-            }
-
-        @Test
-        fun `updates tunnel provider to CLOUDFLARE`() =
-            testScope.runTest {
-                repository.updateTunnelProvider(TunnelProviderType.NGROK)
-                repository.updateTunnelProvider(TunnelProviderType.CLOUDFLARE)
-                val config = repository.getServerConfig()
-
-                assertEquals(TunnelProviderType.CLOUDFLARE, config.tunnelProvider)
-            }
-    }
-
-    @Nested
-    @DisplayName("updateNgrokAuthtoken")
-    inner class UpdateNgrokAuthtoken {
-        @Test
-        fun `updates ngrok authtoken`() =
-            testScope.runTest {
-                repository.updateNgrokAuthtoken("test-authtoken-abc123")
-                val config = repository.getServerConfig()
-
-                assertEquals("test-authtoken-abc123", config.ngrokAuthtoken)
-            }
-
-        @Test
-        fun `reads persisted ngrok authtoken`() =
-            testScope.runTest {
-                repository.updateNgrokAuthtoken("persisted-token")
-                val config1 = repository.getServerConfig()
-                val config2 = repository.getServerConfig()
-
-                assertEquals(config1.ngrokAuthtoken, config2.ngrokAuthtoken)
-            }
-    }
-
-    @Nested
-    @DisplayName("updateNgrokDomain")
-    inner class UpdateNgrokDomain {
-        @Test
-        fun `updates ngrok domain`() =
-            testScope.runTest {
-                repository.updateNgrokDomain("my-app.ngrok-free.app")
-                val config = repository.getServerConfig()
-
-                assertEquals("my-app.ngrok-free.app", config.ngrokDomain)
-            }
-
-        @Test
-        fun `reads persisted ngrok domain`() =
-            testScope.runTest {
-                repository.updateNgrokDomain("test-domain.ngrok.io")
-                val config1 = repository.getServerConfig()
-                val config2 = repository.getServerConfig()
-
-                assertEquals(config1.ngrokDomain, config2.ngrokDomain)
             }
     }
 

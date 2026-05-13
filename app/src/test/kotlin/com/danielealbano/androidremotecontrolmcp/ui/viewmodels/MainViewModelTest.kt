@@ -10,11 +10,8 @@ import com.danielealbano.androidremotecontrolmcp.data.model.ServerLogEntry
 import com.danielealbano.androidremotecontrolmcp.data.model.ServerStatus
 import com.danielealbano.androidremotecontrolmcp.data.model.StorageLocation
 import com.danielealbano.androidremotecontrolmcp.data.model.ToolPermissionsConfig
-import com.danielealbano.androidremotecontrolmcp.data.model.TunnelProviderType
-import com.danielealbano.androidremotecontrolmcp.data.model.TunnelStatus
 import com.danielealbano.androidremotecontrolmcp.data.repository.SettingsRepository
 import com.danielealbano.androidremotecontrolmcp.services.storage.StorageLocationProvider
-import com.danielealbano.androidremotecontrolmcp.services.tunnel.TunnelManager
 import com.danielealbano.androidremotecontrolmcp.utils.PermissionUtils
 import io.mockk.Runs
 import io.mockk.clearMocks
@@ -49,10 +46,8 @@ import org.junit.jupiter.api.Test
 class MainViewModelTest {
     private val testDispatcher: TestDispatcher = StandardTestDispatcher()
     private lateinit var settingsRepository: SettingsRepository
-    private lateinit var tunnelManager: TunnelManager
     private lateinit var storageLocationProvider: StorageLocationProvider
     private lateinit var configFlow: MutableStateFlow<ServerConfig>
-    private lateinit var tunnelStatusFlow: MutableStateFlow<TunnelStatus>
     private lateinit var viewModel: MainViewModel
 
     @BeforeEach
@@ -80,17 +75,14 @@ class MainViewModelTest {
                 ),
             )
 
-        tunnelStatusFlow = MutableStateFlow(TunnelStatus.Disconnected)
 
         settingsRepository = mockk(relaxed = true)
         every { settingsRepository.serverConfig } returns configFlow
 
-        tunnelManager = mockk(relaxed = true)
-        every { tunnelManager.tunnelStatus } returns tunnelStatusFlow
 
         storageLocationProvider = mockk(relaxed = true)
 
-        viewModel = MainViewModel(settingsRepository, tunnelManager, storageLocationProvider, testDispatcher)
+        viewModel = MainViewModel(settingsRepository, storageLocationProvider, testDispatcher)
     }
 
     @AfterEach
@@ -370,89 +362,6 @@ class MainViewModelTest {
     fun `initial server logs list is empty`() =
         runTest {
             assertEquals(emptyList<ServerLogEntry>(), viewModel.serverLogs.value)
-        }
-
-    @Test
-    fun `updateTunnelEnabled calls repository`() =
-        runTest {
-            advanceUntilIdle()
-
-            viewModel.updateTunnelEnabled(true)
-            advanceUntilIdle()
-
-            coVerify { settingsRepository.updateTunnelEnabled(true) }
-        }
-
-    @Test
-    fun `updateTunnelProvider calls repository`() =
-        runTest {
-            advanceUntilIdle()
-
-            viewModel.updateTunnelProvider(TunnelProviderType.NGROK)
-            advanceUntilIdle()
-
-            coVerify { settingsRepository.updateTunnelProvider(TunnelProviderType.NGROK) }
-        }
-
-    @Test
-    fun `updateNgrokAuthtoken calls repository and updates input state`() =
-        runTest {
-            advanceUntilIdle()
-
-            viewModel.updateNgrokAuthtoken("test-token")
-            advanceUntilIdle()
-
-            assertEquals("test-token", viewModel.ngrokAuthtokenInput.value)
-            coVerify { settingsRepository.updateNgrokAuthtoken("test-token") }
-        }
-
-    @Test
-    fun `updateNgrokDomain calls repository and updates input state`() =
-        runTest {
-            advanceUntilIdle()
-
-            viewModel.updateNgrokDomain("my-domain.ngrok.app")
-            advanceUntilIdle()
-
-            assertEquals("my-domain.ngrok.app", viewModel.ngrokDomainInput.value)
-            coVerify { settingsRepository.updateNgrokDomain("my-domain.ngrok.app") }
-        }
-
-    @Test
-    fun `tunnelStatus reflects TunnelManager status`() =
-        runTest {
-            advanceUntilIdle()
-
-            tunnelStatusFlow.value =
-                TunnelStatus.Connected(
-                    url = "https://test.trycloudflare.com",
-                    providerType = TunnelProviderType.CLOUDFLARE,
-                )
-            advanceUntilIdle()
-
-            assertEquals(
-                TunnelStatus.Connected(
-                    url = "https://test.trycloudflare.com",
-                    providerType = TunnelProviderType.CLOUDFLARE,
-                ),
-                viewModel.tunnelStatus.value,
-            )
-        }
-
-    @Test
-    fun `serverConfig collection sets ngrok input fields`() =
-        runTest {
-            // Set ngrok fields BEFORE creating ViewModel so initial load picks them up
-            configFlow.value =
-                configFlow.value.copy(
-                    ngrokAuthtoken = "my-authtoken",
-                    ngrokDomain = "my.ngrok.app",
-                )
-            viewModel = MainViewModel(settingsRepository, tunnelManager, storageLocationProvider, testDispatcher)
-            advanceUntilIdle()
-
-            assertEquals("my-authtoken", viewModel.ngrokAuthtokenInput.value)
-            assertEquals("my.ngrok.app", viewModel.ngrokDomainInput.value)
         }
 
     // ─── Storage Location Tests ─────────────────────────────────────────
@@ -1004,7 +913,7 @@ class MainViewModelTest {
         runTest {
             // Set deviceSlug BEFORE creating ViewModel so initial load picks it up
             configFlow.value = configFlow.value.copy(deviceSlug = "test_device")
-            viewModel = MainViewModel(settingsRepository, tunnelManager, storageLocationProvider, testDispatcher)
+            viewModel = MainViewModel(settingsRepository, storageLocationProvider, testDispatcher)
             advanceUntilIdle()
 
             assertEquals("test_device", viewModel.deviceSlugInput.value)

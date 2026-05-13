@@ -36,8 +36,6 @@ import com.danielealbano.androidremotecontrolmcp.services.storage.PermissionChec
 import com.danielealbano.androidremotecontrolmcp.services.storage.PermissionCheckerImpl
 import com.danielealbano.androidremotecontrolmcp.services.storage.StorageLocationProvider
 import com.danielealbano.androidremotecontrolmcp.services.storage.StorageLocationProviderImpl
-import com.danielealbano.androidremotecontrolmcp.services.tunnel.AndroidCloudflareBinaryResolver
-import com.danielealbano.androidremotecontrolmcp.services.tunnel.CloudflaredBinaryResolver
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -117,9 +115,6 @@ abstract class ServiceModule {
     @Binds
     @Singleton
     abstract fun bindScreenCaptureProvider(impl: ScreenCaptureProviderImpl): ScreenCaptureProvider
-
-    @Binds
-    abstract fun bindCloudflareBinaryResolver(impl: AndroidCloudflareBinaryResolver): CloudflaredBinaryResolver
 
     @Binds
     @Singleton

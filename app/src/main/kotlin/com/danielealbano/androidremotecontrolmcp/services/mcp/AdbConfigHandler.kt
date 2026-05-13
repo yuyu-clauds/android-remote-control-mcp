@@ -6,7 +6,6 @@ import android.util.Log
 import com.danielealbano.androidremotecontrolmcp.data.model.BindingAddress
 import com.danielealbano.androidremotecontrolmcp.data.model.CertificateSource
 import com.danielealbano.androidremotecontrolmcp.data.model.ToolPermissionsConfig
-import com.danielealbano.androidremotecontrolmcp.data.model.TunnelProviderType
 import com.danielealbano.androidremotecontrolmcp.data.repository.SettingsRepository
 import com.danielealbano.androidremotecontrolmcp.services.storage.StorageLocationProvider
 
@@ -48,10 +47,6 @@ class AdbConfigHandler(
         applyHttpsEnabled(intent)
         applyCertificateSource(intent)
         applyCertificateHostname(intent)
-        applyTunnelEnabled(intent)
-        applyTunnelProvider(intent)
-        applyNgrokAuthtoken(intent)
-        applyNgrokDomain(intent)
         applyFileSizeLimit(intent)
         applyAllowHttpDownloads(intent)
         applyAllowUnverifiedHttpsCerts(intent)
@@ -151,47 +146,6 @@ class AdbConfigHandler(
             },
             onFailure = { Log.w(TAG, "Ignoring invalid certificate_hostname '$value': ${it.message}") },
         )
-    }
-
-    private suspend fun applyTunnelEnabled(intent: Intent) {
-        if (!intent.hasExtra(EXTRA_TUNNEL_ENABLED)) return
-        val value = intent.getBooleanExtra(EXTRA_TUNNEL_ENABLED, false)
-        settingsRepository.updateTunnelEnabled(value)
-        Log.i(TAG, "Tunnel enabled updated to $value")
-    }
-
-    private suspend fun applyTunnelProvider(intent: Intent) {
-        val value = intent.getStringExtra(EXTRA_TUNNEL_PROVIDER) ?: return
-        val provider =
-            try {
-                TunnelProviderType.valueOf(value)
-            } catch (_: IllegalArgumentException) {
-                Log.w(
-                    TAG,
-                    "Ignoring invalid tunnel_provider '$value' " +
-                        "(valid: ${TunnelProviderType.entries.joinToString()})",
-                )
-                return
-            }
-        settingsRepository.updateTunnelProvider(provider)
-        Log.i(TAG, "Tunnel provider updated to $provider")
-    }
-
-    private suspend fun applyNgrokAuthtoken(intent: Intent) {
-        val value = intent.getStringExtra(EXTRA_NGROK_AUTHTOKEN) ?: return
-        if (value.isEmpty()) {
-            Log.w(TAG, "Ignoring empty ngrok_authtoken")
-            return
-        }
-        settingsRepository.updateNgrokAuthtoken(value)
-        Log.i(TAG, "ngrok authtoken updated (length=${value.length})")
-    }
-
-    private suspend fun applyNgrokDomain(intent: Intent) {
-        if (!intent.hasExtra(EXTRA_NGROK_DOMAIN)) return
-        val value = intent.getStringExtra(EXTRA_NGROK_DOMAIN) ?: ""
-        settingsRepository.updateNgrokDomain(value)
-        Log.i(TAG, "ngrok domain updated to '$value'")
     }
 
     private suspend fun applyFileSizeLimit(intent: Intent) {
@@ -307,10 +261,6 @@ class AdbConfigHandler(
         internal const val EXTRA_HTTPS_ENABLED = "https_enabled"
         internal const val EXTRA_CERTIFICATE_SOURCE = "certificate_source"
         internal const val EXTRA_CERTIFICATE_HOSTNAME = "certificate_hostname"
-        internal const val EXTRA_TUNNEL_ENABLED = "tunnel_enabled"
-        internal const val EXTRA_TUNNEL_PROVIDER = "tunnel_provider"
-        internal const val EXTRA_NGROK_AUTHTOKEN = "ngrok_authtoken"
-        internal const val EXTRA_NGROK_DOMAIN = "ngrok_domain"
         internal const val EXTRA_FILE_SIZE_LIMIT_MB = "file_size_limit_mb"
         internal const val EXTRA_ALLOW_HTTP_DOWNLOADS = "allow_http_downloads"
         internal const val EXTRA_ALLOW_UNVERIFIED_HTTPS_CERTS = "allow_unverified_https_certs"

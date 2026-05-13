@@ -16,15 +16,12 @@ import com.danielealbano.androidremotecontrolmcp.data.model.ServerLogEntry
 import com.danielealbano.androidremotecontrolmcp.data.model.ServerStatus
 import com.danielealbano.androidremotecontrolmcp.data.model.StorageLocation
 import com.danielealbano.androidremotecontrolmcp.data.model.ToolPermissionsConfig
-import com.danielealbano.androidremotecontrolmcp.data.model.TunnelProviderType
-import com.danielealbano.androidremotecontrolmcp.data.model.TunnelStatus
 import com.danielealbano.androidremotecontrolmcp.data.repository.SettingsRepository
 import com.danielealbano.androidremotecontrolmcp.di.IoDispatcher
 import com.danielealbano.androidremotecontrolmcp.services.accessibility.McpAccessibilityService
 import com.danielealbano.androidremotecontrolmcp.services.mcp.McpServerService
 import com.danielealbano.androidremotecontrolmcp.services.notifications.McpNotificationListenerService
 import com.danielealbano.androidremotecontrolmcp.services.storage.StorageLocationProvider
-import com.danielealbano.androidremotecontrolmcp.services.tunnel.TunnelManager
 import com.danielealbano.androidremotecontrolmcp.utils.Logger
 import com.danielealbano.androidremotecontrolmcp.utils.PermissionUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -47,7 +44,6 @@ class MainViewModel
     @Inject
     constructor(
         private val settingsRepository: SettingsRepository,
-        private val tunnelManager: TunnelManager,
         private val storageLocationProvider: StorageLocationProvider,
         @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
@@ -90,15 +86,6 @@ class MainViewModel
         private val _isNotificationListenerEnabled = MutableStateFlow(false)
         val isNotificationListenerEnabled: StateFlow<Boolean> = _isNotificationListenerEnabled.asStateFlow()
 
-        private val _tunnelStatus = MutableStateFlow<TunnelStatus>(TunnelStatus.Disconnected)
-        val tunnelStatus: StateFlow<TunnelStatus> = _tunnelStatus.asStateFlow()
-
-        private val _ngrokAuthtokenInput = MutableStateFlow("")
-        val ngrokAuthtokenInput: StateFlow<String> = _ngrokAuthtokenInput.asStateFlow()
-
-        private val _ngrokDomainInput = MutableStateFlow("")
-        val ngrokDomainInput: StateFlow<String> = _ngrokDomainInput.asStateFlow()
-
         private val _storageLocations = MutableStateFlow<List<StorageLocation>>(emptyList())
         val storageLocations: StateFlow<List<StorageLocation>> = _storageLocations.asStateFlow()
 
@@ -135,8 +122,6 @@ class MainViewModel
                     _portError.value = null
                     _hostnameInput.value = config.certificateHostname
                     _hostnameError.value = null
-                    _ngrokAuthtokenInput.value = config.ngrokAuthtoken
-                    _ngrokDomainInput.value = config.ngrokDomain
                     _fileSizeLimitInput.value = config.fileSizeLimitMb.toString()
                     _fileSizeLimitError.value = null
                     _downloadTimeoutInput.value = config.downloadTimeoutSeconds.toString()
@@ -152,12 +137,6 @@ class MainViewModel
             viewModelScope.launch {
                 McpServerService.serverStatus.collect { status ->
                     _serverStatus.value = status
-                }
-            }
-
-            viewModelScope.launch {
-                tunnelManager.tunnelStatus.collect { status ->
-                    _tunnelStatus.value = status
                 }
             }
 
@@ -289,32 +268,6 @@ class MainViewModel
                     McpNotificationListenerService::class.java,
                 )
             refreshStorageLocations()
-        }
-
-        fun updateTunnelEnabled(enabled: Boolean) {
-            viewModelScope.launch(ioDispatcher) {
-                settingsRepository.updateTunnelEnabled(enabled)
-            }
-        }
-
-        fun updateTunnelProvider(provider: TunnelProviderType) {
-            viewModelScope.launch(ioDispatcher) {
-                settingsRepository.updateTunnelProvider(provider)
-            }
-        }
-
-        fun updateNgrokAuthtoken(authtoken: String) {
-            _ngrokAuthtokenInput.value = authtoken
-            viewModelScope.launch(ioDispatcher) {
-                settingsRepository.updateNgrokAuthtoken(authtoken)
-            }
-        }
-
-        fun updateNgrokDomain(domain: String) {
-            _ngrokDomainInput.value = domain
-            viewModelScope.launch(ioDispatcher) {
-                settingsRepository.updateNgrokDomain(domain)
-            }
         }
 
         @Suppress("TooGenericExceptionCaught")

@@ -12,7 +12,6 @@ import com.danielealbano.androidremotecontrolmcp.R
 import com.danielealbano.androidremotecontrolmcp.data.model.ServerLogEntry
 import com.danielealbano.androidremotecontrolmcp.data.model.ServerStatus
 import com.danielealbano.androidremotecontrolmcp.data.model.ToolPermissionsConfig
-import com.danielealbano.androidremotecontrolmcp.data.model.TunnelStatus
 import com.danielealbano.androidremotecontrolmcp.data.repository.SettingsRepository
 import com.danielealbano.androidremotecontrolmcp.mcp.CertificateManager
 import com.danielealbano.androidremotecontrolmcp.mcp.McpServer
@@ -49,7 +48,6 @@ import com.danielealbano.androidremotecontrolmcp.services.storage.FileOperationP
 import com.danielealbano.androidremotecontrolmcp.services.storage.StorageLocationProvider
 import com.danielealbano.androidremotecontrolmcp.services.transport.RealtimeMcpBridge
 import com.danielealbano.androidremotecontrolmcp.services.transport.SupabaseRealtimeClient
-import com.danielealbano.androidremotecontrolmcp.services.tunnel.TunnelManager
 import com.danielealbano.androidremotecontrolmcp.ui.MainActivity
 import dagger.hilt.android.AndroidEntryPoint
 import io.modelcontextprotocol.kotlin.sdk.server.Server
@@ -58,7 +56,6 @@ import io.modelcontextprotocol.kotlin.sdk.types.Implementation
 import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -107,8 +104,6 @@ class McpServerService : Service() {
 
     @Inject lateinit var screenshotEncoder: ScreenshotEncoder
 
-    @Inject lateinit var tunnelManager: TunnelManager
-
     @Inject lateinit var storageLocationProvider: StorageLocationProvider
 
     @Inject lateinit var fileOperationProvider: FileOperationProvider
@@ -130,7 +125,6 @@ class McpServerService : Service() {
     private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val serverActive = AtomicBoolean(false)
     private var mcpServer: McpServer? = null
-    private var tunnelObserverJob: Job? = null
     private var realtimeBridge: RealtimeMcpBridge? = null
 
     override fun onCreate() {
@@ -251,52 +245,6 @@ class McpServerService : Service() {
                 ),
             )
 
-            // Start tunnel if remote access is enabled
-            @Suppress("TooGenericExceptionCaught")
-            try {
-                tunnelManager.start(config.port)
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to start tunnel (server continues without tunnel)", e)
-            }
-
-            // Observe tunnel status for logging
-            tunnelObserverJob =
-                coroutineScope.launch {
-                    tunnelManager.tunnelStatus.collect { status ->
-                        when (status) {
-                            is TunnelStatus.Connected -> {
-                                Log.i(TAG, "Tunnel connected: ${status.url} (provider: ${status.providerType})")
-                                emitLogEntry(
-                                    ServerLogEntry(
-                                        timestamp = System.currentTimeMillis(),
-                                        type = ServerLogEntry.Type.TUNNEL,
-                                        message = "Tunnel connected: ${status.url}",
-                                    ),
-                                )
-                            }
-
-                            is TunnelStatus.Error -> {
-                                Log.w(TAG, "Tunnel error: ${status.message}")
-                                emitLogEntry(
-                                    ServerLogEntry(
-                                        timestamp = System.currentTimeMillis(),
-                                        type = ServerLogEntry.Type.TUNNEL,
-                                        message = "Tunnel error: ${status.message}",
-                                    ),
-                                )
-                            }
-
-                            is TunnelStatus.Connecting -> {
-                                Log.i(TAG, "Tunnel connecting...")
-                            }
-
-                            is TunnelStatus.Disconnected -> {
-                                // No-op for initial state; logged at stop time
-                            }
-                        }
-                    }
-                }
-
             Log.i(TAG, "MCP server started successfully on ${config.bindingAddress.address}:${config.port}")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start MCP server", e)
@@ -381,27 +329,6 @@ class McpServerService : Service() {
         }
         realtimeBridge = null
 
-        // Cancel tunnel status observer before stopping the tunnel
-        tunnelObserverJob?.cancel()
-        tunnelObserverJob = null
-
-        // Stop tunnel first (with ANR-safe timeout).
-        // Worst-case blocking time: TUNNEL_STOP_TIMEOUT_MS (3s) + SHUTDOWN_GRACE_PERIOD_MS (1s)
-        // + SHUTDOWN_TIMEOUT_MS (5s) = ~9s total. This is well within the Android service
-        // onDestroy ANR threshold (~200s), so blocking the main thread here is acceptable.
-        @Suppress("TooGenericExceptionCaught")
-        try {
-            runBlocking {
-                withTimeout(TUNNEL_STOP_TIMEOUT_MS) {
-                    tunnelManager.stop()
-                }
-            }
-        } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
-            Log.w(TAG, "Tunnel stop timed out after ${TUNNEL_STOP_TIMEOUT_MS}ms, proceeding with shutdown", e)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error stopping tunnel", e)
-        }
-
         // Stop the Ktor server gracefully
         @Suppress("TooGenericExceptionCaught")
         try {
@@ -462,7 +389,6 @@ class McpServerService : Service() {
         const val NOTIFICATION_ID = 1001
         const val SHUTDOWN_GRACE_PERIOD_MS = 1000L
         const val SHUTDOWN_TIMEOUT_MS = 5000L
-        const val TUNNEL_STOP_TIMEOUT_MS = 3_000L
         const val REALTIME_STOP_TIMEOUT_MS = 3_000L
 
         /**

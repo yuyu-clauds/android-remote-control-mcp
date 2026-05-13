@@ -12,7 +12,6 @@ import com.danielealbano.androidremotecontrolmcp.data.model.BuiltinPermissions
 import com.danielealbano.androidremotecontrolmcp.data.model.CertificateSource
 import com.danielealbano.androidremotecontrolmcp.data.model.ServerConfig
 import com.danielealbano.androidremotecontrolmcp.data.model.ToolPermissionsConfig
-import com.danielealbano.androidremotecontrolmcp.data.model.TunnelProviderType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -108,22 +107,6 @@ class SettingsRepositoryImpl
             dataStore.edit { prefs ->
                 prefs[CERTIFICATE_HOSTNAME_KEY] = hostname
             }
-        }
-
-        override suspend fun updateTunnelEnabled(enabled: Boolean) {
-            dataStore.edit { prefs -> prefs[TUNNEL_ENABLED_KEY] = enabled }
-        }
-
-        override suspend fun updateTunnelProvider(provider: TunnelProviderType) {
-            dataStore.edit { prefs -> prefs[TUNNEL_PROVIDER_KEY] = provider.name }
-        }
-
-        override suspend fun updateNgrokAuthtoken(authtoken: String) {
-            dataStore.edit { prefs -> prefs[NGROK_AUTHTOKEN_KEY] = authtoken }
-        }
-
-        override suspend fun updateNgrokDomain(domain: String) {
-            dataStore.edit { prefs -> prefs[NGROK_DOMAIN_KEY] = domain }
         }
 
         override suspend fun updateFileSizeLimit(limitMb: Int) {
@@ -429,8 +412,6 @@ class SettingsRepositoryImpl
             val bindingAddressName = prefs[BINDING_ADDRESS_KEY] ?: BindingAddress.LOCALHOST.name
             val certificateSourceName = prefs[CERTIFICATE_SOURCE_KEY] ?: CertificateSource.AUTO_GENERATED.name
 
-            val tunnelProviderName = prefs[TUNNEL_PROVIDER_KEY] ?: TunnelProviderType.CLOUDFLARE.name
-
             return ServerConfig(
                 port = prefs[PORT_KEY] ?: ServerConfig.DEFAULT_PORT,
                 bindingAddress =
@@ -445,12 +426,6 @@ class SettingsRepositoryImpl
                 certificateHostname =
                     prefs[CERTIFICATE_HOSTNAME_KEY]
                         ?: ServerConfig.DEFAULT_CERTIFICATE_HOSTNAME,
-                tunnelEnabled = prefs[TUNNEL_ENABLED_KEY] ?: false,
-                tunnelProvider =
-                    TunnelProviderType.entries.firstOrNull { it.name == tunnelProviderName }
-                        ?: TunnelProviderType.CLOUDFLARE,
-                ngrokAuthtoken = prefs[NGROK_AUTHTOKEN_KEY] ?: "",
-                ngrokDomain = prefs[NGROK_DOMAIN_KEY] ?: "",
                 fileSizeLimitMb = prefs[FILE_SIZE_LIMIT_KEY] ?: ServerConfig.DEFAULT_FILE_SIZE_LIMIT_MB,
                 allowHttpDownloads = prefs[ALLOW_HTTP_DOWNLOADS_KEY] ?: false,
                 allowUnverifiedHttpsCerts = prefs[ALLOW_UNVERIFIED_HTTPS_KEY] ?: false,
@@ -576,10 +551,6 @@ class SettingsRepositoryImpl
             private val HTTPS_ENABLED_KEY = booleanPreferencesKey("https_enabled")
             private val CERTIFICATE_SOURCE_KEY = stringPreferencesKey("certificate_source")
             private val CERTIFICATE_HOSTNAME_KEY = stringPreferencesKey("certificate_hostname")
-            private val TUNNEL_ENABLED_KEY = booleanPreferencesKey("tunnel_enabled")
-            private val TUNNEL_PROVIDER_KEY = stringPreferencesKey("tunnel_provider")
-            private val NGROK_AUTHTOKEN_KEY = stringPreferencesKey("ngrok_authtoken")
-            private val NGROK_DOMAIN_KEY = stringPreferencesKey("ngrok_domain")
             private val FILE_SIZE_LIMIT_KEY = intPreferencesKey("file_size_limit_mb")
             private val ALLOW_HTTP_DOWNLOADS_KEY = booleanPreferencesKey("allow_http_downloads")
             private val ALLOW_UNVERIFIED_HTTPS_KEY = booleanPreferencesKey("allow_unverified_https_certs")
