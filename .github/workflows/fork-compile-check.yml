@@ -5,7 +5,7 @@ name: Fork Compile Check
 # which would skip our long-lived feature branches entirely.
 #
 # After the ngrok + cloudflared cleanup, the fork has zero native deps,
-# so compileDebugKotlin needs nothing more than JDK + Gradle.
+# so the build needs nothing more than JDK + Gradle.
 
 on:
   push:
@@ -21,10 +21,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  compile:
-    name: Compile (debug main + unit-test)
+  build-apk:
+    name: Compile + assemble debug APK
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -40,3 +40,14 @@ jobs:
 
       - name: Compile debug main + unit-test sources
         run: ./gradlew compileDebugKotlin compileDebugUnitTestKotlin --stacktrace
+
+      - name: Assemble debug APK
+        run: ./gradlew :app:assembleDebug --stacktrace
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-${{ github.sha }}
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
