@@ -1,77 +1,70 @@
 package com.danielealbano.androidremotecontrolmcp.services.transport
 
 import android.util.Log
-import com.danielealbano.androidremotecontrolmcp.mcp.McpServer
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.launch
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
+import io.modelcontextprotocol.kotlin.sdk.server.Server
+import io.modelcontextprotocol.kotlin.sdk.server.ServerSession
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Bridges Supabase Realtime commands to the MCP SDK tool dispatcher.
+ * Bridges Supabase Realtime to the MCP SDK [Server] as a second transport
+ * alongside the Ktor StreamableHttp transport. The MCP SDK 0.8.3 [Server]
+ * keeps a `sessionRegistry` of all active [ServerSession]s, so creating a
+ * session per transport lets both paths share the same tool registry —
+ * the 55 MCP tools registered in `registerXxxTools()` are reused as-is.
  *
- * Flow:
- *   [SupabaseRealtimeClient.incomingCommands] (cmd:<device_id>)
- *     → dispatch through McpServer's tool registry (same registry used by HTTP transport)
- *     → result → [SupabaseRealtimeClient.publishEvent] (evt:<device_id>)
- *
- * Design rationale (implementation-plan-v0.md §2):
- *   McpServerService keeps Ktor HTTP server intact (dev / local testing).
- *   This bridge is an additional, parallel entry point. The 55 MCP tools
- *   registered in registerXxxTools() are reused as-is — we don't fork the
- *   tool implementations, only the transport layer.
+ * Lifecycle:
+ *   start() — connect Supabase websocket + attach a fresh [RealtimeTransport]
+ *             session to the SDK Server.
+ *   stop()  — close the session and the Supabase websocket. Safe to call
+ *             at any time, including before start() (no-op).
  */
 @Singleton
+@Suppress("DEPRECATION")
 class RealtimeMcpBridge @Inject constructor(
     private val supabaseClient: SupabaseRealtimeClient,
-    private val mcpServer: McpServer,
+    private val mcpSdkServer: Server,
 ) {
-    private val scope = CoroutineScope(SupervisorJob())
+    private var transport: RealtimeTransport? = null
+    private var session: ServerSession? = null
 
-    fun start() {
-        Log.i(TAG, "Starting Realtime → MCP bridge for device ${supabaseClient}")
-        supabaseClient.start()
-        supabaseClient.incomingCommands
-            .onEach { cmd -> handleCommand(cmd) }
-            .launchIn(scope)
+    /** Idempotent; second call while running is a no-op. */
+    suspend fun start() {
+        if (transport != null) {
+            Log.w(TAG, "start() called while already running — ignoring")
+            return
+        }
+        supabaseClient.connect()
+        val t = RealtimeTransport(supabaseClient)
+        // Server.connect() is deprecated in favor of createSession(); both delegate
+        // through the same sessionRegistry so behavior is identical in 0.8.3.
+        session = mcpSdkServer.connect(t)
+        transport = t
+        Log.i(TAG, "RealtimeMcpBridge started")
     }
 
-    fun stop() {
-        scope.coroutineContext[kotlinx.coroutines.Job]?.cancel()
-        supabaseClient.stop()
-    }
-
-    private suspend fun handleCommand(cmd: IncomingCommand) {
-        Log.d(TAG, "Dispatching tool=${cmd.toolName} correlationId=${cmd.correlationId}")
-
-        // TODO(day 4): dispatch to mcpServer tool registry.
-        //   The MCP SDK Server stores tools in an internal registry. We need to
-        //   either:
-        //     (a) Expose a public dispatchTool(name, args): JsonObject method on McpServer
-        //     (b) Re-use the SDK's request handler path by constructing a fake
-        //         tools/call JSON-RPC request and feeding it through the SDK Server's
-        //         message router.
-        //   (a) is cleaner. Decide in day 4 after reading McpServer.kt (174 lines)
-        //   and the MCP SDK 0.8.3 API.
-
-        // For now: stub success ack so the wire is end-to-end testable.
-        val ack = buildJsonObject {
-            put("type", "ack")
-            put("correlation_id", cmd.correlationId)
-            put("tool", cmd.toolName)
-            put("status", "stub")
+    /** Idempotent; safe to call before start() or after stop(). */
+    suspend fun stop() {
+        val t = transport
+        val s = session
+        transport = null
+        session = null
+        try {
+            s?.close()
+        } catch (e: Throwable) {
+            Log.w(TAG, "Error closing ServerSession", e)
         }
         try {
-            supabaseClient.publishEvent(ack)
-        } catch (t: Throwable) {
-            Log.e(TAG, "Failed to publish ack for ${cmd.correlationId}", t)
+            t?.close()
+        } catch (e: Throwable) {
+            Log.w(TAG, "Error closing RealtimeTransport", e)
         }
+        try {
+            supabaseClient.disconnect()
+        } catch (e: Throwable) {
+            Log.w(TAG, "Error disconnecting SupabaseRealtimeClient", e)
+        }
+        Log.i(TAG, "RealtimeMcpBridge stopped")
     }
 
     companion object {
