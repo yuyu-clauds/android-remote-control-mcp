@@ -38,22 +38,28 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      # ngrok-java is a transitive Gradle classpath dependency loaded from
-      # the local Maven `target/` directory. Without the JAR, compileDebugKotlin
-      # fails to resolve symbols from upstream's tunnel module. Cache it
-      # between runs so only the first cold build pays the ~5min Maven cost.
-      - name: Cache ngrok-java JAR
-        id: cache-ngrok-jar
+      # app/build.gradle.kts loads two JARs from local Maven `target/`:
+      #   implementation(...ngrok-java-1.1.1.jar)         — main API
+      #   implementation(...ngrok-java-native-classes.jar) — NativeSession etc
+      # Both are required by compileDebugKotlin (AGP IdentityTransform fails
+      # fast if any implementation-config file is missing). host.jar is
+      # testRuntimeOnly, so we skip it (no Rust toolchain needed).
+      - name: Cache ngrok-java JARs
+        id: cache-ngrok-jars
         uses: actions/cache@v5
         with:
-          path: vendor/ngrok-java/ngrok-java/target/ngrok-java-1.1.1.jar
-          key: ngrok-jar-${{ runner.os }}-${{ hashFiles('vendor/ngrok-java/ngrok-java/pom.xml', 'vendor/ngrok-java/ngrok-java/src/**') }}
+          path: |
+            vendor/ngrok-java/ngrok-java/target/ngrok-java-1.1.1.jar
+            vendor/ngrok-java/ngrok-java-native/target/ngrok-java-native-classes.jar
+          key: ngrok-jars-v2-${{ runner.os }}-${{ hashFiles('vendor/ngrok-java/ngrok-java/pom.xml', 'vendor/ngrok-java/ngrok-java/src/**', 'vendor/ngrok-java/ngrok-java-native/pom.xml', 'vendor/ngrok-java/ngrok-java-native/src/main/java/**') }}
 
-      - name: Build ngrok-java JAR (only on cache miss)
-        if: steps.cache-ngrok-jar.outputs.cache-hit != 'true'
+      - name: Build ngrok-java JARs (only on cache miss)
+        if: steps.cache-ngrok-jars.outputs.cache-hit != 'true'
         run: |
           cd vendor/ngrok-java
+          mvn compile -pl ngrok-java-native --also-make --global-toolchains toolchains.xml -q
           mvn package -pl ngrok-java -DskipTests --global-toolchains toolchains.xml -q
+          (cd ngrok-java-native/target/classes && jar cf ../ngrok-java-native-classes.jar com/)
         env:
           JAVA_11_HOME: ${{ env.JAVA_HOME }}
           JAVA_17_HOME: ${{ env.JAVA_HOME }}
