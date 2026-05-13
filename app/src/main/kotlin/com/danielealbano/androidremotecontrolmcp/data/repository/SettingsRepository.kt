@@ -256,4 +256,13 @@ interface SettingsRepository {
         locationId: String,
         allowDelete: Boolean,
     )
+
+    /** Updates the Supabase project URL used by the Realtime transport. */
+    suspend fun updateSupabaseUrl(url: String)
+
+    /** Updates the Supabase publishable (anon) key used by the Realtime transport. */
+    suspend fun updateSupabasePublishableKey(key: String)
+
+    /** Updates the device id used as the Realtime channel suffix. */
+    suspend fun updateSupabaseDeviceId(deviceId: String)
 }

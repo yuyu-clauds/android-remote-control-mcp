@@ -168,6 +168,18 @@ class SettingsRepositoryImpl
             }
         }
 
+        override suspend fun updateSupabaseUrl(url: String) {
+            dataStore.edit { prefs -> prefs[SUPABASE_URL_KEY] = url }
+        }
+
+        override suspend fun updateSupabasePublishableKey(key: String) {
+            dataStore.edit { prefs -> prefs[SUPABASE_PUBLISHABLE_KEY_KEY] = key }
+        }
+
+        override suspend fun updateSupabaseDeviceId(deviceId: String) {
+            dataStore.edit { prefs -> prefs[SUPABASE_DEVICE_ID_KEY] = deviceId }
+        }
+
         override suspend fun updateToolPermissionsConfig(config: ToolPermissionsConfig) {
             dataStore.edit { prefs ->
                 prefs[TOOL_PERMISSIONS_KEY] = config.toJson()
@@ -447,6 +459,10 @@ class SettingsRepositoryImpl
                         ?: ServerConfig.DEFAULT_DOWNLOAD_TIMEOUT_SECONDS,
                 deviceSlug = prefs[DEVICE_SLUG_KEY] ?: "",
                 toolPermissionsConfig = ToolPermissionsConfig.fromJsonOrDefault(prefs[TOOL_PERMISSIONS_KEY]),
+                supabaseUrl = prefs[SUPABASE_URL_KEY] ?: ServerConfig.DEFAULT_SUPABASE_URL,
+                supabasePublishableKey =
+                    prefs[SUPABASE_PUBLISHABLE_KEY_KEY] ?: ServerConfig.DEFAULT_SUPABASE_PUBLISHABLE_KEY,
+                supabaseDeviceId = prefs[SUPABASE_DEVICE_ID_KEY] ?: ServerConfig.DEFAULT_SUPABASE_DEVICE_ID,
             )
         }
 
@@ -572,6 +588,9 @@ class SettingsRepositoryImpl
             private val TOOL_PERMISSIONS_KEY = stringPreferencesKey("tool_permissions")
             private val AUTHORIZED_LOCATIONS_KEY = stringPreferencesKey("authorized_storage_locations")
             private val BUILTIN_LOCATION_PERMISSIONS_KEY = stringPreferencesKey("builtin_location_permissions")
+            private val SUPABASE_URL_KEY = stringPreferencesKey("supabase_url")
+            private val SUPABASE_PUBLISHABLE_KEY_KEY = stringPreferencesKey("supabase_publishable_key")
+            private val SUPABASE_DEVICE_ID_KEY = stringPreferencesKey("supabase_device_id")
 
             /**
              * Regex pattern for valid hostnames.

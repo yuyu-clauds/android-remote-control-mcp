@@ -24,6 +24,13 @@ package com.danielealbano.androidremotecontrolmcp.data.model
  * @property downloadTimeoutSeconds Download timeout in seconds.
  * @property deviceSlug Optional device identifier slug for tool name prefix
  *   (letters, digits, underscores; max 20 chars).
+ * @property supabaseUrl Supabase project URL for the Realtime transport
+ *   (yuyu-clauds fork). Empty disables the Realtime path.
+ * @property supabasePublishableKey Supabase publishable (anon) key. Embedded
+ *   in the APK by design — security is enforced via Supabase RLS rules, not
+ *   key secrecy.
+ * @property supabaseDeviceId Logical device id used as the Realtime channel
+ *   suffix (cmd:<id> / evt:<id>). v1.0 default is the OnePlus device slug.
  */
 data class ServerConfig(
     val port: Int = DEFAULT_PORT,
@@ -43,6 +50,9 @@ data class ServerConfig(
     val downloadTimeoutSeconds: Int = DEFAULT_DOWNLOAD_TIMEOUT_SECONDS,
     val deviceSlug: String = "",
     val toolPermissionsConfig: ToolPermissionsConfig = ToolPermissionsConfig(),
+    val supabaseUrl: String = DEFAULT_SUPABASE_URL,
+    val supabasePublishableKey: String = DEFAULT_SUPABASE_PUBLISHABLE_KEY,
+    val supabaseDeviceId: String = DEFAULT_SUPABASE_DEVICE_ID,
 ) {
     companion object {
         /** Default server port. */
@@ -80,5 +90,18 @@ data class ServerConfig(
 
         /** Pattern for valid device slug characters (letters, digits, underscores). */
         val DEVICE_SLUG_PATTERN = Regex("^[a-zA-Z0-9_]*$")
+
+        // Supabase Realtime transport defaults (yuyu-clauds fork).
+        // Both the URL and the publishable key are non-secret — the key is the
+        // anon-tier publishable key whose privileges are bounded by RLS policies
+        // on the Supabase project. They live here as defaults so the APK ships
+        // ready-to-run for the v1.0 device without manual on-device config.
+        //
+        // For different deployments (other devices, other projects) override
+        // via SettingsRepository.updateSupabaseUrl / updateSupabasePublishableKey
+        // / updateSupabaseDeviceId.
+        const val DEFAULT_SUPABASE_URL = "https://qrtrdpgwdfaigcbihjgj.supabase.co"
+        const val DEFAULT_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_OW8BNeDeLd0bAy3wrYlJHw_85_MZL_U"
+        const val DEFAULT_SUPABASE_DEVICE_ID = "yuyu-oneplus"
     }
 }
