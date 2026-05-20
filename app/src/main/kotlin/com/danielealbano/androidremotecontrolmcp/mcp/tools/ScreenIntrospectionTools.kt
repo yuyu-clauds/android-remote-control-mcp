@@ -11,6 +11,7 @@ import com.danielealbano.androidremotecontrolmcp.services.accessibility.Accessib
 import com.danielealbano.androidremotecontrolmcp.services.accessibility.AccessibilityServiceProvider
 import com.danielealbano.androidremotecontrolmcp.services.accessibility.AccessibilityTreeParser
 import com.danielealbano.androidremotecontrolmcp.services.accessibility.CompactTreeFormatter
+import com.danielealbano.androidremotecontrolmcp.services.accessibility.SensitivePageDetector
 import com.danielealbano.androidremotecontrolmcp.services.accessibility.WindowData
 import com.danielealbano.androidremotecontrolmcp.services.screencapture.ScreenCaptureProvider
 import com.danielealbano.androidremotecontrolmcp.services.screencapture.ScreenshotAnnotator
@@ -61,6 +62,18 @@ class GetScreenStateHandler
                 } else {
                     false
                 }
+
+            // 1a. Sensitive-page gate: never dump tree contents or screenshot data when the
+            // foreground app is a known banking/payment app or contains a password field.
+            // We check BEFORE getFreshWindows so we don't burn cycles parsing trees we'll discard.
+            if (accessibilityServiceProvider.isReady()) {
+                val pkg = accessibilityServiceProvider.getCurrentPackageName()
+                val root = accessibilityServiceProvider.getRootNode()
+                if (SensitivePageDetector.isSensitiveScreen(root, pkg)) {
+                    Log.i(TAG, "get_screen_state: sensitive page detected (pkg=$pkg) — returning placeholder")
+                    return McpToolUtils.untrustedTextResult(SensitivePageDetector.PLACEHOLDER)
+                }
+            }
 
             // 2. Get multi-window accessibility snapshot
             //    (getFreshWindows handles isReady check and fallback to single-window)

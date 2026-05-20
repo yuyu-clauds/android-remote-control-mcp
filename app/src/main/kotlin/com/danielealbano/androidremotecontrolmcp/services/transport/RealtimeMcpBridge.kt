@@ -24,6 +24,7 @@ class RealtimeMcpBridge(
 ) {
     private var transport: RealtimeTransport? = null
     private var session: ServerSession? = null
+    private var heartbeat: HeartbeatScheduler? = null
 
     /** Idempotent; second call while running is a no-op. */
     suspend fun start() {
@@ -37,6 +38,8 @@ class RealtimeMcpBridge(
         // through the same sessionRegistry so behavior is identical in 0.8.3.
         session = mcpSdkServer.connect(t)
         transport = t
+        // Start heartbeat AFTER the channels are subscribed so publishMessage() works.
+        heartbeat = HeartbeatScheduler(supabaseClient).also { it.start() }
         Log.i(TAG, "RealtimeMcpBridge started")
     }
 
@@ -44,8 +47,15 @@ class RealtimeMcpBridge(
     suspend fun stop() {
         val t = transport
         val s = session
+        val hb = heartbeat
         transport = null
         session = null
+        heartbeat = null
+        try {
+            hb?.stop()
+        } catch (e: Throwable) {
+            Log.w(TAG, "Error stopping HeartbeatScheduler", e)
+        }
         try {
             s?.close()
         } catch (e: Throwable) {

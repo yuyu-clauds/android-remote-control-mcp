@@ -2,11 +2,16 @@ package com.danielealbano.androidremotecontrolmcp.services.screencapture
 
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.util.Base64
 import android.util.Log
 import com.danielealbano.androidremotecontrolmcp.data.model.ScreenshotData
 import com.danielealbano.androidremotecontrolmcp.mcp.McpToolException
 import com.danielealbano.androidremotecontrolmcp.services.accessibility.AccessibilityServiceProvider
 import com.danielealbano.androidremotecontrolmcp.services.accessibility.McpAccessibilityService
+import com.danielealbano.androidremotecontrolmcp.services.accessibility.SensitivePageDetector
+import java.io.ByteArrayOutputStream
 import javax.inject.Inject
 
 /**
@@ -47,6 +52,11 @@ class ScreenCaptureProviderImpl
             }
             val service = (validation as ServiceValidation.Valid).service
 
+            if (isCurrentScreenSensitive()) {
+                Log.i(TAG, "Sensitive page detected — returning placeholder screenshot")
+                return Result.success(buildPlaceholderScreenshotData(quality))
+            }
+
             val bitmap =
                 service.takeScreenshotBitmap()
                     ?: return Result.failure(
@@ -80,6 +90,11 @@ class ScreenCaptureProviderImpl
                 return Result.failure(validation.error)
             }
             val service = (validation as ServiceValidation.Valid).service
+
+            if (isCurrentScreenSensitive()) {
+                Log.i(TAG, "Sensitive page detected — returning placeholder bitmap")
+                return Result.success(buildPlaceholderBitmap())
+            }
 
             val bitmap =
                 service.takeScreenshotBitmap()
@@ -144,10 +159,52 @@ class ScreenCaptureProviderImpl
             return apiLevelProvider.getSdkInt() >= API_LEVEL_R && service.canTakeScreenshot()
         }
 
+        /**
+         * Checks the current foreground screen against [SensitivePageDetector]. Best-effort:
+         * exceptions from the accessibility framework (stale node, service interrupted)
+         * are swallowed and treated as "not sensitive" — privacy isn't worse than the
+         * pre-existing screenshot path, and we don't want to break capture on a flake.
+         */
+        @Suppress("TooGenericExceptionCaught")
+        private fun isCurrentScreenSensitive(): Boolean =
+            try {
+                val pkg = accessibilityServiceProvider.getCurrentPackageName()
+                val root = accessibilityServiceProvider.getRootNode()
+                SensitivePageDetector.isSensitiveScreen(root, pkg)
+            } catch (t: Throwable) {
+                Log.w(TAG, "Sensitive-page check failed; treating as non-sensitive", t)
+                false
+            }
+
+        /** Solid-color 8x8 bitmap used as a stand-in when the real screen is sensitive. */
+        private fun buildPlaceholderBitmap(): Bitmap {
+            val bmp = Bitmap.createBitmap(PLACEHOLDER_DIM, PLACEHOLDER_DIM, Bitmap.Config.ARGB_8888)
+            Canvas(bmp).drawColor(Color.BLACK)
+            // No need to draw text — at 8x8 it wouldn't render. The placeholder string is
+            // surfaced via logs and via the caller's text channel when applicable.
+            return bmp
+        }
+
+        /** JPEG-encoded version of [buildPlaceholderBitmap] wrapped in [ScreenshotData]. */
+        private fun buildPlaceholderScreenshotData(quality: Int): ScreenshotData {
+            val bmp = buildPlaceholderBitmap()
+            return try {
+                val baos = ByteArrayOutputStream()
+                bmp.compress(Bitmap.CompressFormat.JPEG, quality.coerceIn(1, 100), baos)
+                val b64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
+                ScreenshotData(data = b64, width = PLACEHOLDER_DIM, height = PLACEHOLDER_DIM)
+            } finally {
+                bmp.recycle()
+            }
+        }
+
         companion object {
             private const val TAG = "MCP:ScreenCapture"
 
             /** Android 11 (API 30) — minimum for AccessibilityService.takeScreenshot(). */
             private const val API_LEVEL_R = 30
+
+            /** Pixel dimensions of the sensitive-page placeholder bitmap. */
+            private const val PLACEHOLDER_DIM = 8
         }
     }
