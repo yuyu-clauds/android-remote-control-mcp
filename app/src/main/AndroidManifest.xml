@@ -127,9 +127,24 @@
             android:label="@string/widget_grow_title"
             android:theme="@style/Theme.AndroidRemoteControlMcp" />
 
+        <!-- Separate launcher icon so the room opens straight from the app drawer -->
+        <activity-alias
+            android:name=".grow.GrowLauncherAlias"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/widget_grow_title"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:targetActivity=".grow.GrowActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
         <receiver
             android:name=".grow.GrowWidgetProvider"
-            android:exported="true">
+            android:exported="true"
+            android:label="@string/widget_grow_title">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
