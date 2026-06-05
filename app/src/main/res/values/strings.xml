@@ -168,4 +168,8 @@
     <string name="storage_allow_http_downloads_description">Allow downloading files from unencrypted HTTP URLs (less secure)</string>
     <string name="storage_allow_unverified_https_label">Allow Unverified HTTPS</string>
     <string name="storage_allow_unverified_https_description">Accept unverified HTTPS certificates for downloads (less secure)</string>
+
+    <!-- Grow game room widget -->
+    <string name="widget_grow_title">养人类 · 房间</string>
+    <string name="widget_grow_subtitle">点开看看现在的房间</string>
 </resources>

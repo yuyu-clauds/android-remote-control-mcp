@@ -42,6 +42,7 @@
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:networkSecurityConfig="@xml/network_security_config"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.AndroidRemoteControlMcp"
@@ -119,6 +120,24 @@
             android:theme="@android:style/Theme.NoDisplay"
             android:excludeFromRecents="true"
             android:noHistory="true" />
+
+        <!-- Grow game room: WebView shell + home-screen widget entry -->
+        <activity
+            android:name=".grow.GrowActivity"
+            android:exported="false"
+            android:label="@string/widget_grow_title"
+            android:theme="@style/Theme.AndroidRemoteControlMcp" />
+
+        <receiver
+            android:name=".grow.GrowWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_grow_info" />
+        </receiver>
 
     </application>
 
