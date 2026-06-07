@@ -172,4 +172,13 @@
     <!-- Grow game room widget -->
     <string name="widget_grow_title">养人类 · 房间</string>
     <string name="widget_grow_subtitle">点开看看现在的房间</string>
+    <string name="widget_grow_tap_hint">点状态直接记 · 不用开 app</string>
+    <string name="widget_grow_btn_wake">醒了</string>
+    <string name="widget_grow_btn_sleep">睡觉</string>
+    <string name="widget_grow_btn_breakfast">早饭</string>
+    <string name="widget_grow_btn_lunch">午饭</string>
+    <string name="widget_grow_btn_dinner">晚饭</string>
+    <string name="widget_grow_btn_med">吃药</string>
+    <string name="widget_grow_toast_ok">记下啦 🤍</string>
+    <string name="widget_grow_toast_fail">没记上,网络可能不稳,再点一下</string>
 </resources>

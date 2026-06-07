@@ -4,23 +4,118 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_grow_bg"
-    android:gravity="center_vertical"
     android:orientation="vertical"
-    android:padding="14dp">
+    android:padding="12dp">
 
-    <TextView
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:id="@+id/widget_grow_title_row"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/widget_grow_title"
-        android:textColor="#FFE6AA"
-        android:textSize="15sp"
-        android:textStyle="bold" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:text="@string/widget_grow_subtitle"
-        android:textColor="#BCCBE6"
-        android:textSize="12sp" />
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/widget_grow_title"
+            android:textColor="#FFE6AA"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/widget_grow_tap_hint"
+            android:textColor="#9FD6C0"
+            android:textSize="10sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal"
+        android:weightSum="3">
+
+        <TextView
+            android:id="@+id/widget_grow_btn_wake"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/widget_grow_btn"
+            android:gravity="center"
+            android:text="@string/widget_grow_btn_wake"
+            android:textColor="#FFF0CC"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/widget_grow_btn_sleep"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/widget_grow_btn"
+            android:gravity="center"
+            android:text="@string/widget_grow_btn_sleep"
+            android:textColor="#FFF0CC"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/widget_grow_btn_med"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@drawable/widget_grow_btn"
+            android:gravity="center"
+            android:text="@string/widget_grow_btn_med"
+            android:textColor="#FFF0CC"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="6dp"
+        android:orientation="horizontal"
+        android:weightSum="3">
+
+        <TextView
+            android:id="@+id/widget_grow_btn_breakfast"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/widget_grow_btn"
+            android:gravity="center"
+            android:text="@string/widget_grow_btn_breakfast"
+            android:textColor="#FFF0CC"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/widget_grow_btn_lunch"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/widget_grow_btn"
+            android:gravity="center"
+            android:text="@string/widget_grow_btn_lunch"
+            android:textColor="#FFF0CC"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/widget_grow_btn_dinner"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@drawable/widget_grow_btn"
+            android:gravity="center"
+            android:text="@string/widget_grow_btn_dinner"
+            android:textColor="#FFF0CC"
+            android:textSize="14sp" />
+    </LinearLayout>
 </LinearLayout>
