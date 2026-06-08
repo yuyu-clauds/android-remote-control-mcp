@@ -24,6 +24,9 @@ internal object GrowReminderScheduler {
     const val ACTION_FIRE = "com.danielealbano.androidremotecontrolmcp.grow.ACTION_REMINDER"
     const val EXTRA_ID = "reminder_id"
 
+    /** 铝碳酸镁 fires 1.5h after a meal tap (两餐之间). */
+    private const val LVTAN_DELAY_MS = 90L * 60L * 1000L
+
     fun ensureChannels(context: Context) {
         val nm = context.getSystemService(NotificationManager::class.java) ?: return
         nm.createNotificationChannel(
@@ -42,14 +45,33 @@ internal object GrowReminderScheduler {
         )
     }
 
-    /** (Re)arm every reminder. Safe to call repeatedly — alarms with the same id replace. */
+    /**
+     * Ensure notification channels exist. As of 6/8 the in-app med reminders are
+     * signal-triggered (see [onWake] / [onMeal]) instead of armed at fixed clock times, so
+     * this no longer schedules the legacy [GrowReminders.ALL] alarms — the server-side
+     * Telegram reminder is the fixed-time backstop. Safe to call repeatedly (boot / app start).
+     */
     fun scheduleAll(context: Context) {
         ensureChannels(context)
+        Log.i(TAG, "med reminders are signal-triggered; channels ensured")
+    }
+
+    /** 醒了 → 泮托拉唑（空腹晨起），点一下立刻提。 */
+    fun onWake(context: Context) {
+        scheduleOneShot(context, GrowReminders.EVENT_PANTUOLA, 0L)
+    }
+
+    /** 吃饭（早/午/晚）→ 莫沙必利当下提，铝碳酸镁饭后 1.5 小时提。 */
+    fun onMeal(context: Context) {
+        scheduleOneShot(context, GrowReminders.EVENT_MOSHA, 0L)
+        scheduleOneShot(context, GrowReminders.EVENT_LVTAN, LVTAN_DELAY_MS)
+    }
+
+    /** One-shot reminder relative to now (event-triggered); unlike the daily ones it does not repeat. */
+    fun scheduleOneShot(context: Context, reminder: GrowReminders.Reminder, delayMillis: Long) {
+        ensureChannels(context)
         val am = context.getSystemService(AlarmManager::class.java) ?: return
-        for (reminder in GrowReminders.ALL) {
-            scheduleAt(am, context, reminder, nextTrigger(reminder.hour, reminder.minute))
-        }
-        Log.i(TAG, "scheduled ${GrowReminders.ALL.size} reminders")
+        scheduleOneShotAt(am, context, reminder, System.currentTimeMillis() + delayMillis)
     }
 
     /** Re-arm a single reminder for the same time tomorrow (after it has fired). */
@@ -79,6 +101,25 @@ internal object GrowReminderScheduler {
         }
     }
 
+    private fun scheduleOneShotAt(
+        am: AlarmManager,
+        context: Context,
+        reminder: GrowReminders.Reminder,
+        triggerAtMillis: Long,
+    ) {
+        val pi = pendingIntent(context, reminder.id)
+        try {
+            if (am.canScheduleExactAlarms()) {
+                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pi)
+            } else {
+                am.set(AlarmManager.RTC_WAKEUP, triggerAtMillis, pi)
+            }
+        } catch (e: SecurityException) {
+            Log.w(TAG, "exact alarm denied, using inexact one-shot: ${e.message}")
+            am.set(AlarmManager.RTC_WAKEUP, triggerAtMillis, pi)
+        }
+    }
+
     private fun pendingIntent(context: Context, id: Int): PendingIntent {
         val intent =
             Intent(context, GrowReminderReceiver::class.java).apply {
@@ -91,15 +132,6 @@ internal object GrowReminderScheduler {
             intent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
-    }
-
-    private fun nextTrigger(hour: Int, minute: Int): Long {
-        val now = Calendar.getInstance()
-        val candidate = triggerCalendar(hour, minute)
-        if (candidate.timeInMillis <= now.timeInMillis) {
-            candidate.add(Calendar.DAY_OF_YEAR, 1)
-        }
-        return candidate.timeInMillis
     }
 
     private fun triggerCalendar(hour: Int, minute: Int): Calendar =

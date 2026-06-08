@@ -25,9 +25,12 @@ class GrowReminderReceiver : BroadcastReceiver() {
 
     private fun fireReminder(context: Context, intent: Intent) {
         val id = intent.getIntExtra(GrowReminderScheduler.EXTRA_ID, -1)
-        val reminder = GrowReminders.ALL.find { it.id == id } ?: return
+        val reminder = GrowReminders.byId(id) ?: return
         showNotification(context, reminder)
-        GrowReminderScheduler.rescheduleNextDay(context, reminder)
+        // Daily fixed reminders re-arm for tomorrow; event one-shots (EVENT_ALL) fire once and stop.
+        if (GrowReminders.ALL.any { it.id == id }) {
+            GrowReminderScheduler.rescheduleNextDay(context, reminder)
+        }
     }
 
     private fun showNotification(context: Context, reminder: GrowReminders.Reminder) {

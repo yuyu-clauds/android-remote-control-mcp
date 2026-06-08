@@ -44,6 +44,11 @@ class GrowWidgetProvider : AppWidgetProvider() {
         val category = intent.getStringExtra(EXTRA_CATEGORY) ?: return
         val label = intent.getStringExtra(EXTRA_LABEL) ?: return
         val appContext = context.applicationContext
+        // 吃药提醒跟着她的动作走（6/8）：醒了→泮托拉唑；吃饭→莫沙必利当下+铝碳酸镁饭后1.5h。
+        when (category) {
+            "起床" -> GrowReminderScheduler.onWake(appContext)
+            "三餐" -> GrowReminderScheduler.onMeal(appContext)
+        }
         val pending = goAsync()
         Thread {
             val ok = GrowSignalSender.postSignal(category, label)
