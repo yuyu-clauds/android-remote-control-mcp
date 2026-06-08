@@ -1,6 +1,8 @@
 package com.danielealbano.androidremotecontrolmcp.grow
 
+import android.Manifest
 import android.annotation.SuppressLint
+import android.content.pm.PackageManager
 import android.net.http.SslError
 import android.os.Bundle
 import android.view.ViewGroup
@@ -9,6 +11,8 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 
 /**
  * Fullscreen WebView host for the "room" page served at [GROW_URL].
@@ -29,6 +33,11 @@ class GrowActivity : ComponentActivity() {
 
     private lateinit var webView: WebView
 
+    private val notificationPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+            // Granted or not, reminders are still scheduled; Telegram remains the backstop.
+        }
+
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,6 +55,9 @@ class GrowActivity : ComponentActivity() {
                 loadUrl(GROW_URL)
             }
         setContentView(webView)
+
+        ensureNotificationPermission()
+        GrowReminderScheduler.scheduleAll(this)
 
         onBackPressedDispatcher.addCallback(
             this,
@@ -65,6 +77,16 @@ class GrowActivity : ComponentActivity() {
     override fun onDestroy() {
         webView.destroy()
         super.onDestroy()
+    }
+
+    /** On Android 13+ notifications need a runtime grant; without it the reminders post silently. */
+    private fun ensureNotificationPermission() {
+        val granted =
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
+                PackageManager.PERMISSION_GRANTED
+        if (!granted) {
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
 
     /**

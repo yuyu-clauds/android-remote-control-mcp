@@ -16,6 +16,9 @@
     <!-- Notifications (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Grow in-app reminders: best-effort exact timing; falls back to inexact when withheld -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
     <!-- App Management -->
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
     <uses-permission android:name="android.permission.KILL_BACKGROUND_PROCESSES" />
@@ -152,6 +155,15 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_grow_info" />
+        </receiver>
+
+        <!-- Grow in-app reminders: alarm fires + boot re-arm. Not exported (own alarms / system boot only). -->
+        <receiver
+            android:name=".grow.GrowReminderReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
         </receiver>
 
     </application>
